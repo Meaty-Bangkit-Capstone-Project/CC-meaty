@@ -66,36 +66,40 @@ User = get_user_model()
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def upload_image(request):
-    uploaded_file = request.FILES['image']
-    notes = request.data.get('notes')  # Ambil nilai notes dari permintaan POST
+    try:
+        uploaded_file = request.FILES['image']
+        notes = request.data.get('notes')  # Ambil nilai notes dari permintaan POST
 
-    # Memuat model H5
-    model = keras.models.load_model('meaty_app/model_meaty.h5')
+        # Memuat model H5
+        model = keras.models.load_model('meaty_app/model_meaty.h5')
 
-    # Memproses gambar dan melakukan prediksi
-    img = Image.open(uploaded_file)
-    img = img.resize((150, 150))  # Ubah ukuran gambar menjadi 150x150
-    img_array = np.array(img)
-    img_array = img_array / 255.0
-    img_array = np.expand_dims(img_array, axis=0)
-    prediction = model.predict(img_array)
-    predicted_class = np.argmax(prediction)
+        # Memproses gambar dan melakukan prediksi
+        img = Image.open(uploaded_file)
+        img = img.resize((150, 150))  # Ubah ukuran gambar menjadi 150x150
+        img_array = np.array(img)
+        img_array = img_array / 255.0
+        img_array = np.expand_dims(img_array, axis=0)
+        prediction = model.predict(img_array)
+        predicted_class = np.argmax(prediction)
 
-    # Menentukan hasil prediksi
-    if predicted_class == 0:
-        prediction_result = 'Fresh'
-    else:
-        prediction_result = 'Spoiled'
+        # Menentukan hasil prediksi
+        if predicted_class == 0:
+            prediction_result = 'Fresh'
+        else:
+            prediction_result = 'Spoiled'
 
-    # Simpan uploaded_file ke database
-    uploaded_image = UploadedImage(image=uploaded_file, user=request.user, prediction=prediction_result, notes=notes)
-    uploaded_image.save()
+        # Simpan uploaded_file ke database
+        uploaded_image = UploadedImage(image=uploaded_file, user=request.user, prediction=prediction_result, notes=notes)
+        uploaded_image.save()
 
-    # Serialize uploaded_image
-    serializer = UploadedImageSerializer(uploaded_image)
+        # Serialize uploaded_image
+        serializer = UploadedImageSerializer(uploaded_image)
 
-    # Mengirimkan respons JSON
-    return Response({'result': 'success', 'prediction': prediction_result})
+        # Mengirimkan respons JSON dengan result sebagai boolean
+        return Response({'result': True, 'prediction': prediction_result})
+    except Exception as e:
+        # Jika terjadi kesalahan, mengirimkan respons JSON dengan result sebagai boolean False
+        return Response({'result': False, 'error': str(e)})
 
 @api_view(['GET'])
 def user_upload_history(request, user_id):
